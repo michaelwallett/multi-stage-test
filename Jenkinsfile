@@ -43,6 +43,7 @@ pipeline {
           sh "jx step git credentials"
 
           // so we can retrieve the version in later steps
+          sh "docker version"
           sh "echo \$(jx-release-version) > VERSION"
           sh "jx step tag --version \$(cat VERSION)"
           sh "npm install"
