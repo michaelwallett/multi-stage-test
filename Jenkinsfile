@@ -1,10 +1,10 @@
 pipeline {
   agent {
-    label "jenkins-nodejs"
+    label "jenkins-jx-base"
   }
   environment {
     ORG = 'michaelwallett'
-    APP_NAME = 'multi-stage-test'
+    APP_NAME = 'shorty-web'
     CHARTMUSEUM_CREDS = credentials('jenkins-x-chartmuseum')
   }
   stages {
@@ -18,10 +18,9 @@ pipeline {
         HELM_RELEASE = "$PREVIEW_NAMESPACE".toLowerCase()
       }
       steps {
-        container('nodejs') {
-          sh "npm install"
-          sh "CI=true DISPLAY=:99 npm test"
-          sh "export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml"
+        container('jx-base') {
+          sh "docker build -t $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION ."
+          sh "docker push $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
           sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
           dir('./charts/preview') {
             sh "make preview"
@@ -35,7 +34,7 @@ pipeline {
         branch 'master'
       }
       steps {
-        container('nodejs') {
+        container('jx-base') {
 
           // ensure we're not on a detached head
           sh "git checkout master"
@@ -43,12 +42,11 @@ pipeline {
           sh "jx step git credentials"
 
           // so we can retrieve the version in later steps
-          sh "docker version"
           sh "echo \$(jx-release-version) > VERSION"
           sh "jx step tag --version \$(cat VERSION)"
-          sh "npm install"
-          sh "CI=true DISPLAY=:99 npm test"
-          sh "export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml"
+          sh "docker version"
+          sh "docker build -t $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION) ."
+          sh "docker push $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
           sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
         }
       }
@@ -58,8 +56,8 @@ pipeline {
         branch 'master'
       }
       steps {
-        container('nodejs') {
-          dir('./charts/multi-stage-test') {
+        container('jx-base') {
+          dir('./charts/shorty-web') {
             sh "jx step changelog --version v\$(cat ../../VERSION)"
 
             // release the helm chart
