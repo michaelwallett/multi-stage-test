@@ -4,7 +4,7 @@ pipeline {
   }
   environment {
     ORG = 'michaelwallett'
-    APP_NAME = 'shorty-web'
+    APP_NAME = 'multi-stage-test'
     CHARTMUSEUM_CREDS = credentials('jenkins-x-chartmuseum')
   }
   stages {
